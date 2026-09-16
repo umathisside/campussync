@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RATM CampusSync - Rajiv Academy for Tech & Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            pastel: {
+              purple: '#EDE9FE',
+              purpleDark: '#7C3AED',
+              mint: '#D1FAE5',
+              mintDark: '#059669',
+              rose: '#FFE4E6',
+              roseDark: '#E11D48',
+              amber: '#FEF3C7',
+              amberDark: '#D97706',
+              blue: '#E0F2FE',
+              blueDark: '#0284C7',
+              bg: '#F8FAFC'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: linear-gradient(135deg, #f3f0ff 0%, #e0f2fe 50%, #ecfdf5 100%);
+      min-height: 100vh;
+      color: #1e293b;
+    }
+    .pastel-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+    }
+    .pastel-badge-purple { background-color: #EDE9FE; color: #6D28D9; border: 1px solid #DDD6FE; }
+    .pastel-badge-mint { background-color: #D1FAE5; color: #047857; border: 1px solid #A7F3D0; }
+    .pastel-badge-rose { background-color: #FFE4E6; color: #BE123C; border: 1px solid #FECDD3; }
+    .pastel-badge-amber { background-color: #FEF3C7; color: #B45309; border: 1px solid #FDE68A; }
+    
+    @keyframes pulse-soft {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.02); opacity: 0.9; }
+    }
+    .animate-pulse-soft {
+      animation: pulse-soft 3s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="text-slate-800 pb-16 min-h-screen flex flex-col justify-between">
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- OTP Verification Modal Dialog -->
+  <div id="otp-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="pastel-card max-w-sm w-full rounded-3xl p-6 text-center space-y-4 shadow-2xl bg-white border border-purple-200">
+      <div class="w-12 h-12 mx-auto rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xl shadow-inner">
+        📱
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-slate-800">Verify OTP Code</h3>
+        <p class="text-xs text-slate-500 mt-1" id="otp-modal-target-desc">We sent a 4-digit code to your email/phone.</p>
+      </div>
+
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-800">
+        🔑 <strong>Demo Verification Code:</strong> <span id="demo-otp-display" class="font-bold tracking-widest text-amber-900">4321</span>
+      </div>
+
+      <div>
+        <input type="text" id="input-otp-code" maxlength="4" placeholder="••••" class="w-full text-center text-2xl font-bold tracking-widest bg-slate-50 border border-slate-200 rounded-xl py-3 text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+      </div>
+
+      <div class="flex gap-2">
+        <button type="button" onclick="closeOtpModal()" class="flex-1 py-2.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+          Cancel
+        </button>
+        <button type="button" onclick="verifySubmittedOtp()" class="flex-1 py-2.5 text-xs font-bold rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-md transition">
+          Confirm & Register
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 0. LOGIN & REGISTRATION AUTHENTICATION SCREEN -->
+  <div id="login-screen" class="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="pastel-card max-w-md w-full rounded-3xl p-6 md:p-8 space-y-5 shadow-xl border border-white">
+      
+      <!-- College Branding Header -->
+      <div class="text-center space-y-2">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-purple-500 via-indigo-500 to-emerald-400 flex items-center justify-center font-extrabold text-2xl text-white shadow-lg shadow-purple-500/20">
+          🎓
+        </div>
+        <div>
+          <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Rajiv Academy</h2>
+          <p class="text-xs font-semibold text-purple-700 uppercase tracking-widest">for Tech. & Management (RATM)</p>
+          <p class="text-[11px] text-slate-500 mt-0.5">RATM CampusSync • Official Portal</p>
+        </div>
+      </div>
+
+      <!-- Auth Tab Switcher -->
+      <div class="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+        <button type="button" id="tab-auth-login" onclick="toggleAuthMode('login')" class="flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-purple-700 shadow-sm">
+          Sign In
+        </button>
+        <button type="button" id="tab-auth-register" onclick="toggleAuthMode('register')" class="flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-500 hover:text-slate-800">
+          Create Account
+        </button>
+      </div>
+
+      <!-- Quick Demo Credentials Helper -->
+      <div id="demo-quick-fill" class="space-y-2">
+        <div class="flex justify-between items-center text-[11px] text-slate-500 font-semibold px-1">
+          <span>Quick Access Accounts:</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" onclick="fillDemoCredentials('T1')" class="py-1.5 px-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-xl text-xs font-medium text-center transition">
+            👨‍🏫 Dr. Sharma
+          </button>
+          <button type="button" onclick="fillDemoCredentials('S1')" class="py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-medium text-center transition">
+            🎓 Aarav (S1)
+          </button>
+          <button type="button" onclick="fillDemoCredentials('P1')" class="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium text-center transition">
+            🛡️ Parent (P1)
+          </button>
+        </div>
+      </div>
+
+      <!-- 0A. LOGIN FORM -->
+      <form id="form-login" onsubmit="handleFormLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">User / Roll / Faculty ID</label>
+          <input type="text" id="login-userid" placeholder="e.g. T1, S1, or P1" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Passcode / Password</label>
+          <input type="password" id="login-password" value="123" placeholder="••••••••" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+        </div>
+        <button type="submit" class="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-purple-600/20 transition">
+          Access RATM Portal
+        </button>
+      </form>
+
+      <!-- 0B. REGISTRATION FORM WITH OTP & SECURITY CODES -->
+      <form id="form-register" onsubmit="initiateRegistrationWithOtp(event)" class="space-y-3 hidden">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
+          <input type="text" id="reg-fullname" placeholder="e.g. Rohan Verma" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Role Type</label>
+            <select id="reg-role" onchange="handleRoleChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+              <option value="student">Student</option>
+              <option value="parent">Parent</option>
+              <option value="teacher">Teacher / Faculty</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">ID / Roll No.</label>
+            <input type="text" id="reg-userid" placeholder="e.g. S10 or T5" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none uppercase">
+          </div>
+        </div>
+
+        <!-- Contact Method: Email or Phone -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Email Address</label>
+            <input type="email" id="reg-email" placeholder="student@ratm.in" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Phone Number</label>
+            <input type="tel" id="reg-phone" placeholder="+91 9876543210" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+          </div>
+        </div>
+
+        <!-- Dynamic Role Extra Field (Faculty Code / Ward Roll ID) -->
+        <div id="container-extra-field">
+          <label id="lbl-reg-extra" class="block text-xs font-semibold text-slate-600 mb-1">Department / Branch</label>
+          <input type="text" id="reg-extra" placeholder="e.g. BCA / B.Tech CS" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+        </div>
+
+        <!-- Teacher Security Master Passcode Field (Hidden unless Teacher selected) -->
+        <div id="container-teacher-code" class="hidden">
+          <label class="block text-xs font-bold text-rose-600 mb-1">🛡️ Teacher Security Passcode</label>
+          <input type="password" id="reg-teacher-passcode" placeholder="Enter RATM Faculty Code (Demo: RATM123)" class="w-full bg-rose-50/50 border border-rose-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-rose-400 outline-none">
+          <p class="text-[10px] text-rose-500 mt-0.5">Only authorized RATM faculty with valid security code can register.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Create Password</label>
+          <input type="password" id="reg-password" placeholder="••••••••" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-purple-600 hover:from-emerald-700 hover:to-purple-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+          <span>📩</span> Send OTP & Verify
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER (Hidden until login) -->
+  <div id="app-container" class="hidden">
+    
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-30 pastel-card border-b border-purple-100 px-4 lg:px-8 py-3 mb-6 bg-white/80">
+      <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+        
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-500 to-indigo-500 flex items-center justify-center font-bold text-xl text-white shadow-md">
+            🎓
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">RATM CampusSync</h1>
+            <p class="text-xs text-purple-700 font-medium">Rajiv Academy for Tech. & Management</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav id="nav-tabs" class="flex bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200">
+          <button id="tab-teacher" onclick="switchTab('teacher')" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 text-slate-600 hover:text-purple-700">
+            <span>👨‍🏫</span> Faculty Desk
+          </button>
+          <button id="tab-student" onclick="switchTab('student')" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 text-slate-600 hover:text-purple-700">
+            <span>🎓</span> Student Desk
+          </button>
+          <button id="tab-parent" onclick="switchTab('parent')" class="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 text-slate-600 hover:text-purple-700">
+            <span>🛡️</span> Parent Sentinel
+          </button>
+        </nav>
+
+        <!-- User Profile Badge & Logout -->
+        <div class="flex items-center gap-3 bg-purple-50 px-3.5 py-1.5 rounded-2xl border border-purple-200">
+          <div id="user-avatar" class="w-8 h-8 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center text-xs shadow-sm">
+            --
+          </div>
+          <div class="text-left">
+            <p id="user-display-name" class="text-xs font-bold text-slate-800">Loading...</p>
+            <p id="user-display-role" class="text-[10px] text-purple-700 font-semibold uppercase tracking-wider">User</p>
+          </div>
+          <button onclick="logout()" title="Logout" class="ml-2 p-1.5 text-slate-400 hover:text-rose-600 transition hover:bg-rose-50 rounded-xl">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 space-y-6">
+
+      <!-- Alert Zone Container -->
+      <div id="alert-zone" class="space-y-3"></div>
+
+      <!-- 1. TEACHER / FACULTY PORTAL -->
+      <div id="view-teacher" class="space-y-6 hidden">
+        
+        <!-- Pending Approvals Management Card for Teachers -->
+        <div class="pastel-card rounded-3xl p-6 border-l-4 border-purple-500 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <span>🛡️</span> Pending Access Approval Requests
+              </h2>
+              <p class="text-xs text-slate-500">Only authorized teachers can grant portal access to new students and parents.</p>
+            </div>
+            <span id="badge-pending-count" class="pastel-badge-purple px-3 py-1 rounded-full text-xs font-bold">
+              0 Pending
+            </span>
+          </div>
+
+          <div class="overflow-x-auto rounded-2xl border border-slate-200">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                  <th class="p-3">User Name</th>
+                  <th class="p-3">ID & Role</th>
+                  <th class="p-3">Email / Phone</th>
+                  <th class="p-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="teacher-approval-list" class="divide-y divide-slate-100 text-xs">
+                <tr>
+                  <td class="p-4 text-slate-400" colspan="4">No pending user registration requests.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Quick Stats Strip -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="pastel-card p-5 rounded-3xl flex items-center justify-between border-l-4 border-purple-400">
+            <div>
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Course</p>
+              <h3 class="text-lg font-bold text-slate-800 mt-1">Computer Arch.</h3>
+              <p class="text-xs text-purple-600 mt-1">LEC1 • 09:00 AM Slot</p>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xl">📚</div>
+          </div>
+
+          <div class="pastel-card p-5 rounded-3xl flex items-center justify-between border-l-4 border-emerald-400">
+            <div>
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Enrolled Students</p>
+              <h3 class="text-2xl font-bold text-slate-800 mt-1">64 Active</h3>
+              <p class="text-xs text-emerald-600 mt-1">RATM BCA Batch A</p>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xl">👥</div>
+          </div>
+
+          <div class="pastel-card p-5 rounded-3xl flex items-center justify-between border-l-4 border-rose-400">
+            <div>
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bunk Sentinel Flags</p>
+              <h3 class="text-2xl font-bold text-slate-800 mt-1" id="stat-bunk-count">0 Flagged</h3>
+              <p class="text-xs text-rose-600 mt-1">Automated alert sync</p>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-xl">🚨</div>
+          </div>
+        </div>
+
+        <!-- Attendance Marking Card -->
+        <div class="pastel-card rounded-3xl p-6 lg:p-8 space-y-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <span>✍️</span> Mark Class Attendance
+              </h2>
+              <p class="text-xs text-slate-500">Select lecture and date to update student logs instantly</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <select id="lecture-select" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-purple-400">
+                <option value="LEC1">LEC1: Computer Arch. (09:00 AM)</option>
+                <option value="LEC2">LEC2: Data Structures (10:15 AM)</option>
+                <option value="LEC3">LEC3: Web Development (11:30 AM)</option>
+              </select>
+
+              <input type="date" id="attendance-date" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-purple-400">
+            </div>
+          </div>
+
+          <!-- Student Attendance Table -->
+          <div class="overflow-x-auto rounded-2xl border border-slate-200">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                  <th class="p-4">Student Name</th>
+                  <th class="p-4">Student ID</th>
+                  <th class="p-4">Status Toggle</th>
+                </tr>
+              </thead>
+              <tbody id="teacher-student-list" class="divide-y divide-slate-100 text-sm">
+                <tr class="hover:bg-slate-50/60 transition">
+                  <td class="p-4 font-semibold text-slate-800 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs">AP</div>
+                    Aarav Patel
+                  </td>
+                  <td class="p-4 text-slate-500 font-mono text-xs">S1</td>
+                  <td class="p-4">
+                    <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+                      <button type="button" onclick="setStudentStatus('S1', 'present')" id="btn-S1-present" class="status-btn px-4 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-500 text-white shadow-sm">Present</button>
+                      <button type="button" onclick="setStudentStatus('S1', 'absent')" id="btn-S1-absent" class="status-btn px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-500 hover:text-slate-800">Absent</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr class="hover:bg-slate-50/60 transition">
+                  <td class="p-4 font-semibold text-slate-800 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">AR</div>
+                    Ananya Roy
+                  </td>
+                  <td class="p-4 text-slate-500 font-mono text-xs">S2</td>
+                  <td class="p-4">
+                    <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+                      <button type="button" onclick="setStudentStatus('S2', 'present')" id="btn-S2-present" class="status-btn px-4 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-500 text-white shadow-sm">Present</button>
+                      <button type="button" onclick="setStudentStatus('S2', 'absent')" id="btn-S2-absent" class="status-btn px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-500 hover:text-slate-800">Absent</button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex justify-end pt-2">
+            <button onclick="submitAttendance()" class="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-md transition flex items-center gap-2">
+              <span>💾</span> Broadcast Class Attendance
+            </button>
+          </div>
+        </div>
+
+        <!-- Assignment Publishing Card -->
+        <div class="pastel-card rounded-3xl p-6 lg:p-8 space-y-4">
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <span>📢</span> Publish RATM Course Assignment
+          </h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Subject</label>
+              <input type="text" id="assign-subject" placeholder="e.g. Data Structures" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Assignment Title</label>
+              <input type="text" id="assign-title" placeholder="e.g. Red-Black Trees Lab" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Submission Due Date</label>
+              <input type="date" id="assign-date" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Instructions & Guidelines</label>
+            <textarea id="assign-details" placeholder="Enter instructions and guidelines..." rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-800 focus:ring-2 focus:ring-purple-400 outline-none"></textarea>
+          </div>
+
+          <button onclick="addAssignment()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-2">
+            <span>🚀</span> Post Assignment
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 2. STUDENT PORTAL -->
+      <div id="view-student" class="space-y-6 hidden">
+        
+        <!-- Student Hero Banner -->
+        <div class="pastel-card rounded-3xl p-6 bg-gradient-to-r from-purple-100 via-indigo-50 to-emerald-50 border border-purple-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div id="student-hero-avatar" class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-md">
+              AP
+            </div>
+            <div>
+              <h2 id="student-hero-name" class="text-2xl font-bold text-slate-900">Aarav Patel</h2>
+              <p id="student-hero-sub" class="text-xs text-purple-700 font-semibold">Roll No: S1 • RATM Dept. of Computer Applications</p>
+            </div>
+          </div>
+
+          <div class="flex gap-3">
+            <div class="bg-white/90 px-4 py-3 rounded-2xl border border-purple-100 text-center shadow-sm">
+              <p class="text-[11px] font-semibold text-slate-400">Overall Attendance</p>
+              <p class="text-xl font-extrabold text-emerald-600 mt-0.5">92.0%</p>
+            </div>
+            <div class="bg-white/90 px-4 py-3 rounded-2xl border border-purple-100 text-center shadow-sm">
+              <p class="text-[11px] font-semibold text-slate-400">Bunk Warnings</p>
+              <p class="text-xl font-extrabold text-rose-600 mt-0.5" id="student-bunk-badge">0</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Attendance Log -->
+          <div class="pastel-card rounded-3xl p-6 space-y-4">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>📊</span> Attendance Record History
+            </h3>
+            <div class="overflow-hidden rounded-2xl border border-slate-200">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase">
+                    <th class="p-3">Date</th>
+                    <th class="p-3">Lecture</th>
+                    <th class="p-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="student-attendance-list" class="divide-y divide-slate-100 text-xs">
+                  <tr>
+                    <td class="p-3 text-slate-400" colspan="3">Loading attendance records...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Assignments Feed -->
+          <div class="pastel-card rounded-3xl p-6 space-y-4">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span>📝</span> Active RATM Assignments
+            </h3>
+            <div id="student-assignment-list" class="space-y-3">
+              <p class="text-xs text-slate-400">Loading assignments feed...</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 3. PARENT PORTAL -->
+      <div id="view-parent" class="space-y-6 hidden">
+        
+        <div class="pastel-card rounded-3xl p-6 bg-gradient-to-r from-rose-50 via-purple-50 to-indigo-50 border border-rose-200">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-2xl border border-rose-200 shadow-sm">
+              🛡️
+            </div>
+            <div>
+              <h2 id="parent-hero-name" class="text-2xl font-bold text-slate-900">Rajesh Patel</h2>
+              <p class="text-xs text-slate-600">Sentinel Tracking for Ward: <strong id="parent-ward-name" class="text-purple-700">Aarav Patel (S1)</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bunk Alerts Feed -->
+        <div class="pastel-card rounded-3xl p-6 space-y-4 border-l-4 border-rose-500">
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>🚨</span> Automated Bunk Alerts & Attendance Anomalies
+          </h3>
+          <div id="parent-bunk-alerts" class="space-y-3">
+            <p class="text-xs text-slate-500">No bunk anomalies flagged for your ward today.</p>
+          </div>
+        </div>
+
+        <!-- Ward Attendance Log -->
+        <div class="pastel-card rounded-3xl p-6 space-y-4">
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>📋</span> Ward's Attendance Log
+          </h3>
+          <div class="overflow-hidden rounded-2xl border border-slate-200">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase">
+                  <th class="p-3">Date</th>
+                  <th class="p-3">Lecture</th>
+                  <th class="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody id="parent-attendance-list" class="divide-y divide-slate-100 text-xs">
+                <tr>
+                  <td class="p-3 text-slate-400" colspan="3">No records recorded yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+
+    // RATM User Database with Status and OTP state
+    const USERS_DB = {
+      'T1': { id: 'T1', password: '123', name: 'Dr. Sharma', role: 'teacher', status: 'approved', title: 'Senior Professor', email: 'sharma@ratm.in', phone: '9876543210' },
+      'S1': { id: 'S1', password: '123', name: 'Aarav Patel', role: 'student', status: 'approved', parentId: 'P1', dept: 'BCA - Sem 4', email: 'aarav@ratm.in', phone: '9876543211' },
+      'S2': { id: 'S2', password: '123', name: 'Ananya Roy', role: 'student', status: 'approved', parentId: 'P2', dept: 'BCA - Sem 4', email: 'ananya@ratm.in', phone: '9876543212' },
+      'P1': { id: 'P1', password: '123', name: 'Rajesh Patel', role: 'parent', status: 'approved', studentId: 'S1', wardName: 'Aarav Patel', email: 'rajesh@gmail.com', phone: '9876543213' }
+    };
+
+    let currentUser = null;
+    let pendingRegData = null; // Holds temp user registration data awaiting OTP
+
+    // In-memory state fallbacks
+    const studentStatusMap = { 'S1': 'present', 'S2': 'present' };
+    let localBunkAlerts = [];
+    let localAttendance = [
+      { date: '2026-09-16', lectureId: 'LEC1: Computer Arch.', studentId: 'S1', status: 'present' }
+    ];
+    let localAssignments = [
+      { id: 'A1', subject: 'Data Structures', title: 'Implement Red-Black Trees', dueDate: '2026-09-22', details: 'Complete C++ code with tree balancing functions.' }
+    ];
+
+    document.getElementById('attendance-date').valueAsDate = new Date();
+
+    function toggleAuthMode(mode) {
+      const btnLogin = document.getElementById('tab-auth-login');
+      const btnRegister = document.getElementById('tab-auth-register');
+      const formLogin = document.getElementById('form-login');
+      const formRegister = document.getElementById('form-register');
+      const demoQuick = document.getElementById('demo-quick-fill');
+
+      if (mode === 'login') {
+        btnLogin.className = "flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-purple-700 shadow-sm";
+        btnRegister.className = "flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-500 hover:text-slate-800";
+        formLogin.classList.remove('hidden');
+        formRegister.classList.add('hidden');
+        demoQuick.classList.remove('hidden');
+      } else {
+        btnRegister.className = "flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-purple-700 shadow-sm";
+        btnLogin.className = "flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-500 hover:text-slate-800";
+        formRegister.classList.remove('hidden');
+        formLogin.classList.add('hidden');
+        demoQuick.classList.add('hidden');
+      }
+    }
+
+    function fillDemoCredentials(userId) {
+      document.getElementById('login-userid').value = userId;
+      document.getElementById('login-password').value = USERS_DB[userId]?.password || '123';
+      showToast(`Filled login details for ${USERS_DB[userId]?.name || userId}`);
+    }
+
+    function handleRoleChange(role) {
+      const lbl = document.getElementById('lbl-reg-extra');
+      const input = document.getElementById('reg-extra');
+      const teacherPassContainer = document.getElementById('container-teacher-code');
+
+      if (role === 'teacher') {
+        teacherPassContainer.classList.remove('hidden');
+        lbl.innerText = "Designation / Subject";
+        input.placeholder = "e.g. Senior Faculty - Computer Science";
+      } else {
+        teacherPassContainer.classList.add('hidden');
+        if (role === 'parent') {
+          lbl.innerText = "Linked Student Roll ID (Ward)";
+          input.placeholder = "e.g. S1";
+        } else {
+          lbl.innerText = "Department / Semester";
+          input.placeholder = "e.g. BCA - Sem 4";
+        }
+      }
+    }
+
+    function initiateRegistrationWithOtp(e) {
+      e.preventDefault();
+      const name = document.getElementById('reg-fullname').value.trim();
+      const userId = document.getElementById('reg-userid').value.trim().toUpperCase();
+      const role = document.getElementById('reg-role').value;
+      const email = document.getElementById('reg-email').value.trim();
+      const phone = document.getElementById('reg-phone').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const extraField = document.getElementById('reg-extra').value.trim();
+      const teacherCode = document.getElementById('reg-teacher-passcode').value.trim();
+
+      if (!name || !userId || !email || !phone || !password) {
+        showToast('⚠️ Please fill in all required fields!');
+        return;
+      }
+
+      if (USERS_DB[userId]) {
+        showToast('❌ ID already registered! Choose another ID.');
+        return;
+      }
+
+      // Teacher Security Passcode validation
+      if (role === 'teacher') {
+        if (teacherCode !== 'RATM123' && teacherCode !== 'RATM-FACULTY-2026') {
+          showToast('❌ Invalid Teacher Security Passcode! Only authorized faculty can register.');
+          return;
+        }
+      }
+
+      // Prepare temp pending registration payload
+      pendingRegData = {
+        id: userId,
+        password: password,
+        name: name,
+        role: role,
+        email: email,
+        phone: phone,
+        status: role === 'teacher' ? 'approved' : 'pending_approval',
+        extraField: extraField
+      };
+
+      // Show OTP Verification Modal
+      document.getElementById('otp-modal-target-desc').innerText = `OTP code sent to ${email} / ${phone}`;
+      document.getElementById('otp-modal').classList.remove('hidden');
+      document.getElementById('input-otp-code').value = '';
+      showToast(`🔑 OTP sent to ${email}`);
+    }
+
+    function closeOtpModal() {
+      document.getElementById('otp-modal').classList.add('hidden');
+      pendingRegData = null;
+    }
+
+    async function verifySubmittedOtp() {
+      const code = document.getElementById('input-otp-code').value.trim();
+      if (code !== '4321' && code !== '1234') {
+        showToast('❌ Invalid OTP Code! Use demo code: 4321');
+        return;
+      }
+
+      if (!pendingRegData) return;
+
+      const newUser = {
+        id: pendingRegData.id,
+        password: pendingRegData.password,
+        name: pendingRegData.name,
+        role: pendingRegData.role,
+        email: pendingRegData.email,
+        phone: pendingRegData.phone,
+        status: pendingRegData.status
+      };
+
+      if (pendingRegData.role === 'student') {
+        newUser.dept = pendingRegData.extraField || 'RATM Department';
+      } else if (pendingRegData.role === 'parent') {
+        newUser.studentId = pendingRegData.extraField.toUpperCase() || 'S1';
+        newUser.wardName = USERS_DB[newUser.studentId]?.name || `Student (${newUser.studentId})`;
+      } else if (pendingRegData.role === 'teacher') {
+        newUser.title = pendingRegData.extraField || 'Faculty Member';
+      }
+
+      // Store user
+      USERS_DB[pendingRegData.id] = newUser;
+
+      // Register with backend server API
+      try {
+        await fetch(`${API_BASE}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newUser)
+        });
+      } catch (err) {}
+
+      closeOtpModal();
+
+      if (newUser.status === 'pending_approval') {
+        showToast(`🎉 Registration successful! Account is PENDING approval by an RATM Faculty member.`);
+        toggleAuthMode('login');
+        document.getElementById('login-userid').value = newUser.id;
+        document.getElementById('login-password').value = newUser.password;
+      } else {
+        showToast(`🎉 Faculty Account Verified & Authorized!`);
+        loginUser(newUser);
+      }
+    }
+
+    async function handleFormLogin(e) {
+      e.preventDefault();
+      const userId = document.getElementById('login-userid').value.trim().toUpperCase();
+      const password = document.getElementById('login-password').value;
+
+      try {
+        const res = await fetch(`${API_BASE}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, password })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (data.user.status === 'pending_approval') {
+            showToast('⏳ Access Pending: Account awaiting authorization by RATM Faculty.');
+            return;
+          }
+          USERS_DB[data.user.id] = data.user;
+          loginUser(data.user);
+          return;
+        } else if (data.error) {
+          showToast(`❌ ${data.error}`);
+          return;
+        }
+      } catch (err) {}
+
+      // Fallback local DB check
+      const user = USERS_DB[userId];
+      if (!user) {
+        showToast('❌ User ID not found! Register an account first.');
+        return;
+      }
+
+      if (user.password && user.password !== password) {
+        showToast('❌ Incorrect passcode!');
+        return;
+      }
+
+      if (user.status === 'pending_approval') {
+        showToast('⏳ Access Pending: Account awaiting authorization by RATM Faculty.');
+        return;
+      }
+
+      loginUser(user);
+    }
+
+    function loginUser(user) {
+      currentUser = user;
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-container').classList.remove('hidden');
+
+      document.getElementById('user-display-name').innerText = user.name;
+      document.getElementById('user-display-role').innerText = user.role.toUpperCase();
+      document.getElementById('user-avatar').innerText = user.name.split(' ').map(n=>n[0]).join('');
+
+      applyRolePermissions(user);
+      showToast(`👋 Welcome to RATM Portal, ${user.name}!`);
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('app-container').classList.add('hidden');
+      document.getElementById('login-screen').classList.remove('hidden');
+      showToast('🔒 Logged out successfully');
+    }
+
+    function applyRolePermissions(user) {
+      const tabTeacher = document.getElementById('tab-teacher');
+      const tabStudent = document.getElementById('tab-student');
+      const tabParent = document.getElementById('tab-parent');
+
+      tabTeacher.classList.add('hidden');
+      tabStudent.classList.add('hidden');
+      tabParent.classList.add('hidden');
+
+      if (user.role === 'teacher') {
+        tabTeacher.classList.remove('hidden');
+        renderPendingApprovals();
+        switchTab('teacher');
+      } 
+      else if (user.role === 'student') {
+        tabStudent.classList.remove('hidden');
+        document.getElementById('student-hero-name').innerText = user.name;
+        document.getElementById('student-hero-sub').innerText = `Roll No: ${user.id} • ${user.dept || 'RATM Dept'}`;
+        document.getElementById('student-hero-avatar').innerText = user.name.split(' ').map(n=>n[0]).join('');
+        switchTab('student');
+      } 
+      else if (user.role === 'parent') {
+        tabParent.classList.remove('hidden');
+        document.getElementById('parent-hero-name').innerText = user.name;
+        document.getElementById('parent-ward-name').innerText = `${user.wardName} (${user.studentId})`;
+        switchTab('parent');
+      }
+    }
+
+    function switchTab(role) {
+      if (currentUser && currentUser.role !== role) {
+        showToast('⚠️ Access Denied: Unauthorized tab selection');
+        return;
+      }
+
+      ['teacher', 'student', 'parent'].forEach(r => {
+        const btn = document.getElementById(`tab-${r}`);
+        const view = document.getElementById(`view-${r}`);
+        if (r === role) {
+          btn.className = "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-white text-purple-700 shadow-sm border border-purple-200";
+          view.classList.remove('hidden');
+        } else {
+          btn.className = "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 text-slate-500 hover:text-purple-700";
+          view.classList.add('hidden');
+        }
+      });
+
+      if (role === 'student' || role === 'parent') {
+        const targetStudentId = role === 'student' ? currentUser.id : currentUser.studentId;
+        loadStudentData(role, targetStudentId);
+      }
+    }
+
+    function renderPendingApprovals() {
+      const tbody = document.getElementById('teacher-approval-list');
+      const pendingUsers = Object.values(USERS_DB).filter(u => u.status === 'pending_approval');
+      
+      document.getElementById('badge-pending-count').innerText = `${pendingUsers.length} Pending`;
+
+      if (pendingUsers.length === 0) {
+        tbody.innerHTML = `<tr><td class="p-4 text-slate-400" colspan="4">No pending user registration requests.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pendingUsers.map(u => `
+        <tr class="hover:bg-slate-50/60 transition">
+          <td class="p-3 font-semibold text-slate-800">${u.name}</td>
+          <td class="p-3">
+            <span class="font-mono font-bold text-slate-700">${u.id}</span>
+            <span class="ml-1 text-[10px] px-2 py-0.5 rounded-md uppercase font-bold ${u.role==='student' ? 'pastel-badge-purple' : 'pastel-badge-rose'}">${u.role}</span>
+          </td>
+          <td class="p-3 text-slate-500">${u.email || u.phone || 'N/A'}</td>
+          <td class="p-3 text-right">
+            <button onclick="approveUser('${u.id}', true)" class="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold shadow-sm transition mr-1">
+              Approve
+            </button>
+            <button onclick="approveUser('${u.id}', false)" class="px-3 py-1 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-bold shadow-sm transition">
+              Reject
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function approveUser(userId, isApproved) {
+      if (USERS_DB[userId]) {
+        USERS_DB[userId].status = isApproved ? 'approved' : 'rejected';
+      }
+
+      try {
+        await fetch(`${API_BASE}/approve-user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, status: isApproved ? 'approved' : 'rejected' })
+        });
+      } catch (err) {}
+
+      showToast(isApproved ? `✅ User ${userId} Approved!` : `❌ User ${userId} Rejected.`);
+      renderPendingApprovals();
+    }
+
+    function setStudentStatus(studentId, status) {
+      studentStatusMap[studentId] = status;
+      const btnPresent = document.getElementById(`btn-${studentId}-present`);
+      const btnAbsent = document.getElementById(`btn-${studentId}-absent`);
+
+      if (status === 'present') {
+        btnPresent.className = "status-btn px-4 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-500 text-white shadow-sm";
+        btnAbsent.className = "status-btn px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-500 hover:text-slate-800";
+      } else {
+        btnPresent.className = "status-btn px-4 py-1.5 rounded-lg text-xs font-bold transition text-slate-500 hover:text-slate-800";
+        btnAbsent.className = "status-btn px-4 py-1.5 rounded-lg text-xs font-bold transition bg-rose-500 text-white shadow-sm";
+      }
+    }
+
+    async function submitAttendance() {
+      const lectureId = document.getElementById('lecture-select').value;
+      const date = document.getElementById('attendance-date').value;
+      const records = [
+        { studentId: 'S1', status: studentStatusMap['S1'] },
+        { studentId: 'S2', status: studentStatusMap['S2'] }
+      ];
+
+      try {
+        const res = await fetch(`${API_BASE}/attendance`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date, lectureId, records })
+        });
+        
+        if (res.ok) {
+          showToast('✅ Attendance broadcasted & synchronized!');
+          fetchBunks();
+        } else {
+          throw new Error('Sync Failed');
+        }
+      } catch (err) {
+        records.forEach(r => {
+          localAttendance.push({ date, lectureId, studentId: r.studentId, status: r.status });
+        });
+
+        if (lectureId === 'LEC2' && studentStatusMap['S1'] === 'absent') {
+          const alertObj = {
+            id: Date.now(),
+            studentId: 'S1',
+            message: 'Aarav Patel (S1) was PRESENT in LEC1 (09:00 AM) but ABSENT in LEC2 (10:15 AM)!'
+          };
+          localBunkAlerts.push(alertObj);
+          renderBunkAlerts([alertObj]);
+        }
+
+        showToast('✅ Attendance saved locally!');
+      }
+    }
+
+    async function fetchBunks() {
+      try {
+        const res = await fetch(`${API_BASE}/bunks`);
+        const bunks = await res.json();
+        renderBunkAlerts(bunks);
+      } catch (err) {
+        renderBunkAlerts(localBunkAlerts);
+      }
+    }
+
+    function renderBunkAlerts(bunks) {
+      const alertZone = document.getElementById('alert-zone');
+      document.getElementById('stat-bunk-count').innerText = `${bunks.length} Flagged`;
+      document.getElementById('student-bunk-badge').innerText = bunks.length;
+
+      if (!bunks.length) {
+        alertZone.innerHTML = '';
+        return;
+      }
+
+      alertZone.innerHTML = bunks.map(b => `
+        <div class="pastel-card rounded-3xl p-4 border border-rose-300 bg-rose-50/80 flex items-start gap-3 animate-pulse-soft">
+          <div class="text-2xl">🚨</div>
+          <div>
+            <h4 class="font-bold text-rose-800 text-xs uppercase tracking-wider">Automated Bunk Sentinel Alert</h4>
+            <p class="text-xs text-rose-900 mt-0.5">${b.message}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function addAssignment() {
+      const subject = document.getElementById('assign-subject').value;
+      const title = document.getElementById('assign-title').value;
+      const dueDate = document.getElementById('assign-date').value;
+      const details = document.getElementById('assign-details').value;
+
+      if (!subject || !title) {
+        showToast('⚠️ Please provide subject and title!');
+        return;
+      }
+
+      const newAssignment = { id: 'A' + Date.now(), subject, title, dueDate: dueDate || '2026-09-30', details };
+
+      try {
+        await fetch(`${API_BASE}/assignments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newAssignment)
+        });
+        showToast('🚀 Assignment posted successfully!');
+      } catch (err) {
+        localAssignments.unshift(newAssignment);
+        showToast('🚀 Assignment posted locally!');
+      }
+
+      document.getElementById('assign-subject').value = '';
+      document.getElementById('assign-title').value = '';
+      document.getElementById('assign-details').value = '';
+    }
+
+    async function loadStudentData(role, studentId) {
+      let attendanceData = localAttendance.filter(a => a.studentId === studentId);
+      let assignmentData = localAssignments;
+      let bunkData = localBunkAlerts.filter(b => b.studentId === studentId);
+
+      try {
+        const res = await fetch(`${API_BASE}/student-summary/${studentId}`);
+        if (res.ok) {
+          const data = await res.json();
+          attendanceData = data.attendance || attendanceData;
+          assignmentData = data.assignments || localAssignments;
+          bunkData = data.bunks || bunkData;
+        }
+      } catch (err) {}
+
+      const targetTable = role === 'student' ? 'student-attendance-list' : 'parent-attendance-list';
+      const tbody = document.getElementById(targetTable);
+
+      if (attendanceData.length === 0) {
+        tbody.innerHTML = `<tr><td class="p-3 text-slate-400" colspan="3">No attendance records found for ${studentId}</td></tr>`;
+      } else {
+        tbody.innerHTML = attendanceData.map(a => `
+          <tr class="hover:bg-slate-50/60">
+            <td class="p-3 font-semibold text-slate-700">${a.date}</td>
+            <td class="p-3 text-slate-600">${a.lectureId}</td>
+            <td class="p-3">
+              <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${a.status === 'present' ? 'pastel-badge-mint' : 'pastel-badge-rose'}">
+                ${a.status}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      if (role === 'student') {
+        const assignList = document.getElementById('student-assignment-list');
+        assignList.innerHTML = assignmentData.map(as => `
+          <div class="bg-white border border-slate-200 p-3.5 rounded-2xl space-y-1.5 shadow-sm">
+            <div class="flex justify-between items-start">
+              <span class="px-2 py-0.5 rounded-md pastel-badge-purple text-[10px] font-bold">${as.subject}</span>
+              <span class="text-[10px] text-slate-400">Due: ${as.dueDate}</span>
+            </div>
+            <h4 class="font-bold text-slate-800 text-xs">${as.title}</h4>
+            <p class="text-xs text-slate-500 leading-relaxed">${as.details || 'No additional notes.'}</p>
+          </div>
+        `).join('');
+      }
+
+      if (role === 'parent') {
+        const parentAlerts = document.getElementById('parent-bunk-alerts');
+        if (!bunkData.length) {
+          parentAlerts.innerHTML = `<p class="text-xs text-slate-500">No bunk anomalies flagged for your ward today.</p>`;
+        } else {
+          parentAlerts.innerHTML = bunkData.map(b => `
+            <div class="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-800">
+              🚨 <strong>Alert:</strong> ${b.message}
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'pastel-card bg-white text-slate-800 text-xs font-semibold px-4 py-3 rounded-2xl border border-purple-200 shadow-xl transition-all duration-300 opacity-100 transform translate-y-0';
+      toast.innerText = msg;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
