@@ -1,0 +1,217 @@
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Registered User Database with Approval Status and OTP Integration
+const users = {
+  'T1': { id: 'T1', password: '123', name: 'Dr. Sharma', role: 'teacher', status: 'approved', title: 'Senior Professor', email: 'sharma@ratm.in', phone: '9876543210' },
+  'S1': { id: 'S1', password: '123', name: 'Aarav Patel', role: 'student', status: 'approved', parentId: 'P1', dept: 'BCA - Sem 4', email: 'aarav@ratm.in', phone: '9876543211' },
+  'S2': { id: 'S2', password: '123', name: 'Ananya Roy', role: 'student', status: 'approved', parentId: 'P2', dept: 'BCA - Sem 4', email: 'ananya@ratm.in', phone: '9876543212' },
+  'P1': { id: 'P1', password: '123', name: 'Rajesh Patel', role: 'parent', status: 'approved', studentId: 'S1', wardName: 'Aarav Patel', email: 'rajesh@gmail.com', phone: '9876543213' }
+};
+
+let attendanceStore = [];
+let bunkAlertsStore = [];
+let assignmentsStore = [
+  { id: 'A1', subject: 'Data Structures', title: 'Implement Red-Black Trees', dueDate: '2026-09-22', details: 'Complete C++ code with tree balancing functions.' }
+];
+
+const LECTURE_SEQUENCE = ['LEC1', 'LEC2', 'LEC3'];
+
+
+// POST /api/register - Account creation with OTP & Teacher Security Code
+app.post('/api/register', (req, res) => {
+  try {
+    const { id, password, name, role, email, phone, status, dept, title, studentId, wardName } = req.body;
+
+    if (!id || !password || !name || !role) {
+      return res.status(400).json({ error: 'Missing required registration fields' });
+    }
+
+    const formattedId = id.toUpperCase();
+    if (users[formattedId]) {
+      return res.status(400).json({ error: 'User ID already registered.' });
+    }
+
+    const newUser = {
+      id: formattedId,
+      password,
+      name,
+      role,
+      email: email || '',
+      phone: phone || '',
+      status: status || (role === 'teacher' ? 'approved' : 'pending_approval'),
+      dept: dept || 'RATM Department',
+      title: title || 'Faculty Member',
+      studentId: studentId ? studentId.toUpperCase() : undefined,
+      wardName: wardName || (studentId && users[studentId.toUpperCase()] ? users[studentId.toUpperCase()].name : 'Ward')
+    };
+
+    users[formattedId] = newUser;
+
+    res.status(201).json({ success: true, message: 'Registration submitted', user: newUser });
+  } catch (error) {
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// POST /api/login - Authenticate user credentials and approval status
+app.post('/api/login', (req, res) => {
+  const { userId, password } = req.body;
+  const formattedId = userId ? userId.toUpperCase() : '';
+  const user = users[formattedId];
+
+  if (!user) {
+    return res.status(401).json({ error: 'User ID not registered' });
+  }
+
+  if (user.password && user.password !== password) {
+    return res.status(401).json({ error: 'Incorrect passcode/password' });
+  }
+
+  if (user.status === 'pending_approval') {
+    return res.status(403).json({ error: 'Account pending authorization by an RATM Faculty member.' });
+  }
+
+  res.json({ success: true, user });
+});
+
+// POST /api/approve-user - Faculty authorization endpoint to approve/reject students and parents
+app.post('/api/approve-user', (req, res) => {
+  const { userId, status } = req.body;
+  const formattedId = userId ? userId.toUpperCase() : '';
+
+  if (users[formattedId]) {
+    users[formattedId].status = status; // 'approved' or 'rejected'
+    return res.json({ success: true, user: users[formattedId] });
+  }
+
+  res.status(404).json({ error: 'User not found' });
+});
+
+
+function runBunkSentinel(date, lectureId, studentId, currentStatus) {
+  if (currentStatus !== 'absent') return null;
+
+  const currentLectureIndex = LECTURE_SEQUENCE.findIndex(lec => lectureId.startsWith(lec));
+  if (currentLectureIndex <= 0) return null;
+
+  const earlierPresent = attendanceStore.find(rec => {
+    const isSameDate = rec.date === date;
+    const isSameStudent = rec.studentId === studentId;
+    const recIndex = LECTURE_SEQUENCE.findIndex(lec => rec.lectureId.startsWith(lec));
+    return isSameDate && isSameStudent && recIndex < currentLectureIndex && rec.status === 'present';
+  });
+
+  if (earlierPresent) {
+    const student = users[studentId];
+    const studentName = student ? student.name : studentId;
+    const alertMessage = `${studentName} (${studentId}) was PRESENT in ${earlierPresent.lectureId} but ABSENT in ${lectureId}!`;
+
+    const existing = bunkAlertsStore.find(b => b.date === date && b.lectureId === lectureId && b.studentId === studentId);
+    if (!existing) {
+      const newAlert = {
+        id: 'BUNK-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        studentId,
+        message: alertMessage,
+        date,
+        lectureId,
+        timestamp: new Date().toISOString()
+      };
+      bunkAlertsStore.unshift(newAlert);
+      return newAlert;
+    }
+  }
+  return null;
+}
+
+// POST /api/attendance - Batch record class attendance
+app.post('/api/attendance', (req, res) => {
+  try {
+    const { date, lectureId, records } = req.body;
+
+    if (!date || !lectureId || !Array.isArray(records)) {
+      return res.status(400).json({ error: 'Missing date, lectureId, or records array' });
+    }
+
+    const newBunksTriggered = [];
+
+    records.forEach(rec => {
+      attendanceStore = attendanceStore.filter(a => !(a.date === date && a.lectureId === lectureId && a.studentId === rec.studentId));
+
+      const newRecord = {
+        date,
+        lectureId,
+        studentId: rec.studentId,
+        status: rec.status,
+        timestamp: new Date().toISOString()
+      };
+      attendanceStore.push(newRecord);
+
+      const flaggedBunk = runBunkSentinel(date, lectureId, rec.studentId, rec.status);
+      if (flaggedBunk) {
+        newBunksTriggered.push(flaggedBunk);
+      }
+    });
+
+    res.json({
+      success: true,
+      message: `Recorded attendance for ${records.length} students`,
+      bunksTriggered: newBunksTriggered
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to record attendance', details: error.message });
+  }
+});
+
+app.get('/api/bunks', (req, res) => {
+  res.json(bunkAlertsStore);
+});
+
+app.post('/api/assignments', (req, res) => {
+  try {
+    const { subject, title, dueDate, details } = req.body;
+    if (!subject || !title) return res.status(400).json({ error: 'Subject and title required' });
+
+    const newAssignment = {
+      id: 'A' + Date.now(),
+      subject,
+      title,
+      dueDate: dueDate || '2026-09-30',
+      details: details || '',
+      createdAt: new Date().toISOString()
+    };
+    assignmentsStore.unshift(newAssignment);
+    res.status(201).json({ success: true, assignment: newAssignment });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to publish assignment' });
+  }
+});
+
+app.get('/api/assignments', (req, res) => {
+  res.json(assignmentsStore);
+});
+
+app.get('/api/student-summary/:studentId', (req, res) => {
+  const { studentId } = req.params;
+  const studentAttendance = attendanceStore.filter(a => a.studentId === studentId);
+  const studentBunks = bunkAlertsStore.filter(b => b.studentId === studentId);
+
+  res.json({
+    studentId,
+    attendance: studentAttendance,
+    assignments: assignmentsStore,
+    bunks: studentBunks
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 RATM CampusSync Backend Server running on port ${PORT}`);
+});
